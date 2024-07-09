@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>License Compliance</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        input {
+            margin-bottom: 10px;
+            padding: 8px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Search functionality
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('keyup', function() {
+                const filter = searchInput.value.toLowerCase();
+                const rows = document.querySelectorAll('tbody tr');
+
+                rows.forEach(function(row) {
+                    const cells = row.querySelectorAll('td');
+                    const cellText = Array.from(cells).reduce((acc, cell) => acc + cell.textContent.toLowerCase(), '');
+
+                    if (cellText.includes(filter)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+        });
+    </script>
+</head>
+<body>
+    <h1>License Compliance</h1>
+    <input type="text" id="searchInput" placeholder="Search for components...">
+    <table>
+        <thead>
+            <tr>
+                <th>Component</th>
+                <th>Version</th>
+                <th>License Information</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{compliance_html_content}}
+        </tbody>
+    </table>
+</body>
+</html>
