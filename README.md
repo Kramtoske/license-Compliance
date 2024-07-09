@@ -27,17 +27,16 @@ This project generates license compliance information from multiple SBOM (Softwa
 
 - `sboms/`: Directory containing the SBOM JSON files.
 - `template.html`: HTML template used to generate the HTML output.
-- `generate_compliance_file.py`: Main script to generate license compliance files.
-- `README.md`: This file.
+- `lc.py`: Main script to generate license compliance files.
 
 ## Usage
 
 1. Place your SBOM JSON files in the `sboms` directory.
-2. Ensure the `template.html` file is in the same directory as `generate_compliance_file.py`.
+2. Ensure the `template.html` file is in the same directory as `lc.py`.
 3. Run the script:
 
     ```bash
-    python3 generate_compliance_file.py
+    python3 lc.py
     ```
 
 4. The script will generate `license_compliance.txt` and `license_compliance.html` files in the project directory.
