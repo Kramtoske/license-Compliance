@@ -1,7 +1,7 @@
 import os
 import json
-import base64
 import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Directory containing SBOM JSON files
 sboms_dir = "sboms"
@@ -14,19 +14,20 @@ response = requests.get(licenses_url)
 licenses_data = response.json()['licenses']
 licenses_lookup = {license['licenseId']: license for license in licenses_data}
 
-# Function to get license details URL
-def get_license_details_url(license_id):
-    return licenses_lookup.get(license_id, {}).get('detailsUrl', "")
+# Function to get license reference URL
+def get_license_reference_url(license_id):
+    return licenses_lookup.get(license_id, {}).get('reference', "")
 
 # Function to get full license text
 def get_full_license_text(details_url):
-    response = requests.get(details_url)
-    license_data = response.json()
-    return license_data.get('licenseText', ''), license_data.get('licenseTextHtml', '')
-
-# Function to decode base64 license content
-def decode_base64_license_content(content):
-    return base64.b64decode(content).decode('utf-8')
+    try:
+        response = requests.get(details_url)
+        response.raise_for_status()  # Raise an error for bad status
+        license_data = response.json()
+        return license_data.get('licenseText', ''), license_data.get('licenseTextHtml', '')
+    except (requests.exceptions.HTTPError, requests.exceptions.RequestException, json.JSONDecodeError) as e:
+        print(f"Error fetching license details from {details_url}: {e}")
+        return '', ''
 
 # Consolidate and deduplicate components from all SBOMs
 components = {}
@@ -39,42 +40,54 @@ for sbom_file in os.listdir(sboms_dir):
                 if component_key not in components:
                     components[component_key] = component
 
-# Generate license compliance report
-license_report = []
-license_texts = {}
-
-for key, component in components.items():
+# Function to process each component and gather license info
+def process_component(key, component):
     licenses_info = []
+    licenses_info_html = []
     for license in component.get('licenses', []):
         license_id = license['license'].get('id', 'Unknown')
         license_name = license['license'].get('name', 'Unknown')
 
         # Check for license URL from SPDX data
-        license_details_url = ""
+        license_reference_url = ""
         if license_id != 'Unknown':
-            license_details_url = get_license_details_url(license_id)
+            license_reference_url = get_license_reference_url(license_id)
 
-        if license_details_url:
-            license_text, license_text_html = get_full_license_text(license_details_url)
+        if license_reference_url:
+            details_url = licenses_lookup[license_id].get('detailsUrl', "")
+            license_text, license_text_html = get_full_license_text(details_url)
             if license_text and license_text_html:
                 license_texts[license_id] = {'text': license_text, 'html': license_text_html}
         else:
-            if 'text' in license['license']:
-                license_text = decode_base64_license_content(license['license']['text']['content'])
-                license_text_html = "<pre>" + license_text + "</pre>"
-                license_texts[license_name] = {'text': license_text, 'html': license_text_html}
-            else:
-                license_text = ""
-                license_text_html = ""
+            license_text = ""
+            license_text_html = ""
 
-        license_url = license.get('url', 'Unknown')
-        if 'spdx.org' not in license_url:
-            license_url = license_details_url
-
-        licenses_info.append(f"License: {license_id if license_id != 'Unknown' else license_name}, {license_url}")
+        if license_reference_url:
+            licenses_info.append(f"License: {license_id if license_id != 'Unknown' else license_name}, {license_reference_url}")
+            licenses_info_html.append(f'License: {license_id if license_id != "Unknown" else license_name}, <a href="{license_reference_url}" target="_blank">{license_reference_url}</a>')
+        else:
+            licenses_info.append(f"License: {license_id if license_id != 'Unknown' else license_name}")
+            licenses_info_html.append(f'License: {license_id if license_id != "Unknown" else license_name}')
 
     component_info = f"Component: {component['group']}:{component['name']}, Version: {component['version']}, {'; '.join(licenses_info)}"
-    license_report.append(component_info)
+    component_info_html = f"Component: {component['group']}:{component['name']}, Version: {component['version']}, {'; '.join(licenses_info_html)}"
+    return component_info, component_info_html
+
+# Generate license compliance report
+license_report = []
+license_report_html = []
+license_texts = {}
+
+# Use ThreadPoolExecutor for concurrent processing
+with ThreadPoolExecutor(max_workers=10) as executor:
+    futures = {executor.submit(process_component, key, component): key for key, component in components.items()}
+    for future in as_completed(futures):
+        try:
+            component_info, component_info_html = future.result()
+            license_report.append(component_info)
+            license_report_html.append(component_info_html)
+        except Exception as e:
+            print(f"Error processing component: {e}")
 
 # Write license compliance text report
 with open("license_compliance.txt", "w") as txt_file:
@@ -118,13 +131,12 @@ html_report = """
                 <th>Component</th>
                 <th>Version</th>
                 <th>License</th>
-                <th>URL</th>
             </tr>
         </thead>
         <tbody>
 """
 
-for item in license_report:
+for item in license_report_html:
     component, version, *licenses_info = item.split(', ')
     licenses_html = ", ".join(licenses_info).replace("License: ", "").replace("Unknown, ", "")
     html_report += f"""
