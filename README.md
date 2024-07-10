@@ -65,17 +65,15 @@ The script performs the following steps:
 4. **Generate Outputs**: Writes the license compliance information to `license_compliance.txt` and `license_compliance.html`.
 
 # Example Output
-
 ## Text File (`license_compliance.txt`)
 ```text
 Component: org.slf4j:jul-to-slf4j, Version: 2.0.12, License: MIT, https://spdx.org/licenses/MIT.html
 Component: ch.qos.logback:logback-classic, Version: 1.4.14, License: EPL-1.0, https://spdx.org/licenses/EPL-1.0.html; License: LGPL-2.1, https://spdx.org/licenses/LGPL-2.1.html
 ```
 ## HTML File (`license_compliance.html`)
-
 ```html
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <title>License Compliance Report</title>
     <style>
@@ -149,7 +147,6 @@ Component: ch.qos.logback:logback-classic, Version: 1.4.14, License: EPL-1.0, ht
 </body>
 </html> 
 ```
-
 ## HTML File (`licenses_text.txt`)
 ```text
 License ID: MIT
@@ -162,7 +159,7 @@ License ID: LGPL-2.1
 ## HTML File (`licenses_text.html`)
 ```html
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <title>License Texts</title>
 </head>

@@ -97,7 +97,7 @@ with open("license_compliance.txt", "w") as txt_file:
 # Write license compliance HTML report
 html_report = """
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <title>License Compliance Report</title>
     <style>
@@ -188,7 +188,7 @@ with open("licenses_text.txt", "w") as txt_file:
 with open("licenses_text.html", "w") as html_file:
     html_content = """
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
         <title>License Texts</title>
     </head>
