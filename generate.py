@@ -1,130 +1,195 @@
-import json
 import os
+import json
 import base64
-import re
 import requests
-from collections import defaultdict
 
-# Define the URL to the hosted licenses file
+# Directory containing SBOM JSON files
+sboms_dir = "sboms"
+
+# Hosted licenses JSON URL
 licenses_url = "https://raw.githubusercontent.com/spdx/license-list-data/main/json/licenses.json"
 
-# Define the paths to the SBOM files directory and HTML template file
-sbom_directory_path = os.path.join(os.path.dirname(__file__), 'sboms')
-template_file_path = os.path.join(os.path.dirname(__file__), 'template.html')
-
-# Load HTML template from the file
-with open(template_file_path, 'r') as template_file:
-    html_template = template_file.read()
-
-# Download and load licenses information from the URL
+# Fetch the licenses data
 response = requests.get(licenses_url)
-if response.status_code != 200:
-    raise Exception(f"Failed to download licenses data: {response.status_code}")
+licenses_data = response.json()['licenses']
+licenses_lookup = {license['licenseId']: license for license in licenses_data}
 
-licenses_data = response.json()
+# Function to get license details URL
+def get_license_details_url(license_id):
+    return licenses_lookup.get(license_id, {}).get('detailsUrl', "")
 
-# Extract the licenses list from the licenses_data
-licenses_list = licenses_data.get("licenses", [])
+# Function to get full license text
+def get_full_license_text(details_url):
+    response = requests.get(details_url)
+    license_data = response.json()
+    return license_data.get('licenseText', ''), license_data.get('licenseTextHtml', '')
 
-# Create a dictionary for quick lookup of licenses by licenseId
-licenses_lookup = {license['licenseId']: license for license in licenses_list}
+# Function to decode base64 license content
+def decode_base64_license_content(content):
+    return base64.b64decode(content).decode('utf-8')
 
-# Function to decode base64 content and extract license URL
-def decode_base64_and_extract_url(encoded_text):
-    decoded_text = base64.b64decode(encoded_text).decode('utf-8')
-    # Match URLs starting with either http or https
-    url_pattern = re.compile(r'https?://[^\s]+|http://[^\s]+')
-    urls = url_pattern.findall(decoded_text)
-    return urls[0] if urls else 'N/A'
+# Consolidate and deduplicate components from all SBOMs
+components = {}
+for sbom_file in os.listdir(sboms_dir):
+    if sbom_file.endswith(".json"):
+        with open(os.path.join(sboms_dir, sbom_file), "r") as file:
+            sbom_data = json.load(file)
+            for component in sbom_data.get("components", []):
+                component_key = f"{component['group']}:{component['name']}:{component['version']}"
+                if component_key not in components:
+                    components[component_key] = component
 
-# Dictionary to store unique components
-unique_components = defaultdict(dict)
+# Generate license compliance report
+license_report = []
+license_texts = {}
 
-# Scan all JSON files in the specified directory
-for sbom_filename in os.listdir(sbom_directory_path):
-    if sbom_filename.endswith('.json'):
-        sbom_file_path = os.path.join(sbom_directory_path, sbom_filename)
-        with open(sbom_file_path, 'r') as sbom_file:
-            try:
-                sbom = json.load(sbom_file)
-                for component in sbom.get('components', []):
-                    component_group = component.get('group', 'Unknown')
-                    component_name = component.get('name', 'Unknown')
-                    component_version = component.get('version', 'Unknown')
-                    component_key = (component_group, component_name, component_version)
-                    if component_key not in unique_components:
-                        unique_components[component_key] = component
-            except json.JSONDecodeError:
-                print(f"Error reading {sbom_file_path}, not a valid JSON file.")
+for key, component in components.items():
+    licenses_info = []
+    for license in component.get('licenses', []):
+        license_id = license['license'].get('id', 'Unknown')
+        license_name = license['license'].get('name', 'Unknown')
 
-# Initialize the license compliance text and HTML
-compliance_text = []
-compliance_html = []
+        # Check for license URL from SPDX data
+        license_details_url = ""
+        if license_id != 'Unknown':
+            license_details_url = get_license_details_url(license_id)
 
-# Extract and format license information from unique components
-for component_key, component in sorted(unique_components.items()):
-    component_group, component_name, component_version = component_key
-    full_component_name = f"{component_group}:{component_name}"
-    licenses = component.get('licenses', [])
-    license_info_list = []
-    license_info_text_list = []
-
-    if licenses:
-        for license_entry in licenses:
-            license_info = license_entry.get('license', {})
-            license_id = license_info.get('id', None)
-            license_name = license_info.get('name', 'Unknown')
-
-            # Determine license URL
-            if license_id in licenses_lookup:
-                license_data = licenses_lookup[license_id]
-                license_url = license_data.get('reference', 'N/A')
-                license_name = license_data.get('name', license_id)
+        if license_details_url:
+            license_text, license_text_html = get_full_license_text(license_details_url)
+            if license_text and license_text_html:
+                license_texts[license_id] = {'text': license_text, 'html': license_text_html}
+        else:
+            if 'text' in license['license']:
+                license_text = decode_base64_license_content(license['license']['text']['content'])
+                license_text_html = "<pre>" + license_text + "</pre>"
+                license_texts[license_name] = {'text': license_text, 'html': license_text_html}
             else:
-                license_url = license_info.get('url', 'N/A')
-                if not license_id:
-                    license_id = license_name  # Use license name if ID is not available
+                license_text = ""
+                license_text_html = ""
 
-            license_info_list.append(f"License: {license_id}, <a href='{license_url}'>{license_url}</a>")
-            license_info_text_list.append(f"License: {license_id}, {license_url}")
+        license_url = license.get('url', 'Unknown')
+        if 'spdx.org' not in license_url:
+            license_url = license_details_url
 
-        license_info_str = "; ".join(license_info_list)
-        license_info_text_str = "; ".join(license_info_text_list)
-        component_info = (
-            f"Component: {full_component_name}, Version: {component_version}, {license_info_text_str}"
-        )
-        component_html = (
-            f"<tr><td>{full_component_name}</td><td>{component_version}</td><td>{license_info_str}</td></tr>"
-        )
-    else:
-        component_info = (
-            f"Component: {full_component_name}, Version: {component_version}, "
-            "License: None, URL: N/A"
-        )
-        component_html = (
-            f"<tr><td>{full_component_name}</td><td>{component_version}</td><td>License: None, URL: N/A</td></tr>"
-        )
+        licenses_info.append(f"License: {license_id if license_id != 'Unknown' else license_name}, {license_url}")
 
-    compliance_text.append(component_info)
-    compliance_html.append(component_html)
+    component_info = f"Component: {component['group']}:{component['name']}, Version: {component['version']}, {'; '.join(licenses_info)}"
+    license_report.append(component_info)
 
-# Join the license information into a single string
-compliance_txt_content = "\n".join(compliance_text)
-compliance_html_content = "\n".join(compliance_html)
+# Write license compliance text report
+with open("license_compliance.txt", "w") as txt_file:
+    for item in license_report:
+        txt_file.write(f"{item}\n")
 
-# Define the output file paths
-output_txt_file_path = os.path.join(os.path.dirname(__file__), 'license_compliance.txt')
-output_html_file_path = os.path.join(os.path.dirname(__file__), 'license_compliance.html')
+# Write license compliance HTML report
+html_report = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>License Compliance Report</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        input[type="text"] {
+            margin-bottom: 10px;
+            width: 100%;
+            padding: 8px;
+        }
+    </style>
+</head>
+<body>
+    <h1>License Compliance Report</h1>
+    <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Search for components..">
+    <table id="complianceTable">
+        <thead>
+            <tr>
+                <th>Component</th>
+                <th>Version</th>
+                <th>License</th>
+                <th>URL</th>
+            </tr>
+        </thead>
+        <tbody>
+"""
 
-# Write to license_compliance.txt
-with open(output_txt_file_path, 'w') as compliance_file:
-    compliance_file.write(compliance_txt_content)
+for item in license_report:
+    component, version, *licenses_info = item.split(', ')
+    licenses_html = ", ".join(licenses_info).replace("License: ", "").replace("Unknown, ", "")
+    html_report += f"""
+        <tr>
+            <td>{component}</td>
+            <td>{version}</td>
+            <td>{licenses_html}</td>
+        </tr>
+    """
 
-# Insert the compliance data into the HTML template
-html_output = html_template.replace("{{compliance_html_content}}", compliance_html_content)
+html_report += """
+        </tbody>
+    </table>
+    <script>
+        function searchTable() {
+            var input, filter, table, tr, td, i, j, txtValue;
+            input = document.getElementById("searchInput");
+            filter = input.value.toLowerCase();
+            table = document.getElementById("complianceTable");
+            tr = table.getElementsByTagName("tr");
+            for (i = 1; i < tr.length; i++) {
+                tr[i].style.display = "none";
+                td = tr[i].getElementsByTagName("td");
+                for (j = 0; j < td.length; j++) {
+                    if (td[j]) {
+                        txtValue = td[j].textContent || td[j].innerText;
+                        if (txtValue.toLowerCase().indexOf(filter) > -1) {
+                            tr[i].style.display = "";
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
+"""
 
-# Write the final HTML to the output file
-with open(output_html_file_path, 'w') as compliance_file:
-    compliance_file.write(html_output)
+with open("license_compliance.html", "w") as html_file:
+    html_file.write(html_report)
 
-print("license_compliance.txt and license_compliance.html created successfully.")
+# Write license texts to separate files
+with open("licenses_text.txt", "w") as txt_file:
+    for license_id, texts in license_texts.items():
+        txt_file.write(f"License ID: {license_id}\n")
+        txt_file.write(f"{texts['text']}\n\n")
+
+with open("licenses_text.html", "w") as html_file:
+    html_content = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>License Texts</title>
+    </head>
+    <body>
+    """
+    for license_id, texts in license_texts.items():
+        html_content += f"<h2>License ID: {license_id}</h2>"
+        html_content += texts['html']
+        html_content += "<hr>"
+    html_content += """
+    </body>
+    </html>
+    """
+    html_file.write(html_content)
+
+print("license_compliance.txt, license_compliance.html, licenses_text.txt, and licenses_text.html created successfully.")
