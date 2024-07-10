@@ -67,9 +67,10 @@ The script performs the following steps:
 # Example Output
 
 ## Text File (`license_compliance.txt`)
+```text
 Component: org.slf4j:jul-to-slf4j, Version: 2.0.12, License: MIT, https://spdx.org/licenses/MIT.html
 Component: ch.qos.logback:logback-classic, Version: 1.4.14, License: EPL-1.0, https://spdx.org/licenses/EPL-1.0.html; License: LGPL-2.1, https://spdx.org/licenses/LGPL-2.1.html
-
+```
 ## HTML File (`license_compliance.html`)
 
 ```html
@@ -146,19 +147,20 @@ Component: ch.qos.logback:logback-classic, Version: 1.4.14, License: EPL-1.0, ht
         }
     </script>
 </body>
-</html>
+</html> 
+```
 
 ## HTML File (`licenses_text.txt`)
-
+```text
 License ID: MIT
 <license text for MIT>
 License ID: EPL-1.0
 <license text for EPL-1.0>
 License ID: LGPL-2.1
 <license text for LGPL-2.1>
-
+```
 ## HTML File (`licenses_text.html`)
-
+```html
 <!DOCTYPE html>
 <html>
 <head>
@@ -176,3 +178,4 @@ License ID: LGPL-2.1
     <hr>
 </body>
 </html>
+```
