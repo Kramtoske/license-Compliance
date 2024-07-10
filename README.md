@@ -54,30 +54,3 @@ The script performs the following steps:
 3. **Scan SBOM Files**: Scans all JSON files in the `sboms` directory and extracts unique components.
 4. **Extract License Information**: For each component, extracts license information and ensures URLs are taken from the SPDX data.
 5. **Generate Outputs**: Writes the license compliance information to `license_compliance.txt` and `license_compliance.html`. Additionally, generates `licenses_text.txt` and `licenses_text.html` containing detailed license texts.
-
-## HTML Template
-
-Ensure your `template.html` includes a placeholder for the compliance content:
-
-```html
-<!DOCTYPE html>
-<html>
-<head>
-    <title>License Compliance</title>
-</head>
-<body>
-    <h1>License Compliance Report</h1>
-    <table border="1">
-        <thead>
-            <tr>
-                <th>Component</th>
-                <th>Version</th>
-                <th>License Information</th>
-            </tr>
-        </thead>
-        <tbody>
-            {{compliance_html_content}}
-        </tbody>
-    </table>
-</body>
-</html>
