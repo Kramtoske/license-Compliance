@@ -32,8 +32,7 @@ This project generates license compliance information from multiple SBOM (Softwa
 For more details on usage, script description, and example outputs, see the additional README files in this repository.
 
 1. Place your SBOM JSON files in the `sboms` directory.
-2. Ensure the `template.html` file is in the same directory as `generate.py`.
-3. Run the script:
+2. Run the script:
 
     ```bash
     python3 generate.py
@@ -49,11 +48,10 @@ For more details on usage, script description, and example outputs, see the addi
 
 The script performs the following steps:
 
-1. **Load HTML Template**: Reads the HTML template from `template.html`.
-2. **Download SPDX Licenses**: Fetches the SPDX license data from the URL `https://raw.githubusercontent.com/spdx/license-list-data/main/json/licenses.json`.
-3. **Scan SBOM Files**: Scans all JSON files in the `sboms` directory and extracts unique components.
-4. **Extract License Information**: For each component, extracts license information and ensures URLs are taken from the SPDX data.
-5. **Generate Outputs**: Writes the license compliance information to `license_compliance.txt` and `license_compliance.html`. Additionally, generates `licenses_text.txt` and `licenses_text.html` containing detailed license texts.
+1. **Download SPDX Licenses**: Fetches the SPDX license data from the URL `https://raw.githubusercontent.com/spdx/license-list-data/main/json/licenses.json`.
+2. **Scan SBOM Files**: Scans all JSON files in the `sboms` directory and extracts unique components.
+3. **Extract License Information**: For each component, extracts license information and ensures URLs are taken from the SPDX data.
+4. **Generate Outputs**: Writes the license compliance information to `license_compliance.txt` and `license_compliance.html`. Additionally, generates `licenses_text.txt` and `licenses_text.html` containing detailed license texts.
 
 # Script Description
 
