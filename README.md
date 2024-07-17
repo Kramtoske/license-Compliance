@@ -1,176 +1,79 @@
-# License compliance and LICENSING file generator
+# License Compliance Report Generator
 
-This project generates license compliance information from multiple SBOM (Software Bill of Materials) JSON files. It extracts license information for each software component and outputs it in both text and HTML formats.
-
-## Features
-
-- **Multi-SBOM Support**: Scans multiple SBOM JSON files from a specified directory.
-- **License Information Extraction**: Extracts and deduplicates license information for each component.
-- **SPDX License Reference**: Always uses the SPDX license reference URL.
-- **Output Formats**: Generates `license_compliance.txt`, `license_compliance.html`, `licenses_text.txt`, and `licenses_text.html` files.
-- **Concurrency**: Utilizes concurrent processing for faster license data fetching.
+This script generates license compliance reports from SBOM (Software Bill of Materials) JSON files. It retrieves and processes license information from SPDX license and exception lists.
 
 ## Prerequisites
 
-- Python 3.x
+- Python 3.6 or later
 - `requests` library
 
-## Installation
+You can install the required library using pip:
 
-1. Clone the repository or download the script files.
-2. Install the required Python library:
-
-    ```bash
-    pip install requests
-    ```
-
-## Directory Structure
-
-- `sboms/`: Directory containing the SBOM JSON files.
-- `generate.py`: Main script to generate license compliance files.
-
-For more details on usage, script description, and example outputs, see the additional README files in this repository.
-
-1. Place your SBOM JSON files in the `sboms` directory.
-2. Run the script:
-
-    ```bash
-    python3 generate.py
-    ```
-
-4. The script will generate the following files in the project directory:
-    - `license_compliance.txt`
-    - `license_compliance.html`
-    - `licenses_text.txt`
-    - `licenses_text.html`
-
-## Script Description
-
-The script performs the following steps:
-
-1. **Download SPDX Licenses**: Fetches the SPDX license data from the URL `https://raw.githubusercontent.com/spdx/license-list-data/main/json/licenses.json`.
-2. **Scan SBOM Files**: Scans all JSON files in the `sboms` directory and extracts unique components.
-3. **Extract License Information**: For each component, extracts license information and ensures URLs are taken from the SPDX data.
-4. **Generate Outputs**: Writes the license compliance information to `license_compliance.txt` and `license_compliance.html`. Additionally, generates `licenses_text.txt` and `licenses_text.html` containing detailed license texts.
-
-# Script Description
-
-The script performs the following steps:
-
-1. **Download SPDX Licenses**: Fetches the SPDX license data from the URL `https://raw.githubusercontent.com/spdx/license-list-data/main/json/licenses.json`.
-2. **Scan SBOM Files**: Scans all JSON files in the `sboms` directory and extracts unique components.
-3. **Extract License Information**: For each component, extracts license information and ensures URLs are taken from the SPDX data.
-4. **Generate Outputs**: Writes the license compliance information to `license_compliance.txt` and `license_compliance.html`.
-
-# Example Output
-## Text File (`license_compliance.txt`)
-```text
-Component: org.slf4j:jul-to-slf4j, Version: 2.0.12, License: MIT, https://spdx.org/licenses/MIT.html
-Component: ch.qos.logback:logback-classic, Version: 1.4.14, License: EPL-1.0, https://spdx.org/licenses/EPL-1.0.html; License: LGPL-2.1, https://spdx.org/licenses/LGPL-2.1.html
+```bash
+pip install requests
 ```
-## HTML File (`license_compliance.html`)
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <title>License Compliance Report</title>
-    <style>
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        table, th, td {
-            border: 1px solid black;
-        }
-        th, td {
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        input[type="text"] {
-            margin-bottom: 10px;
-            width: 100%;
-            padding: 8px;
-        }
-    </style>
-</head>
-<body>
-    <h1>License Compliance Report</h1>
-    <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Search for components..">
-    <table id="complianceTable">
-        <thead>
-            <tr>
-                <th>Component</th>
-                <th>Version</th>
-                <th>License</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>org.slf4j:jul-to-slf4j</td>
-                <td>2.0.12</td>
-                <td>MIT, <a href="https://spdx.org/licenses/MIT.html">https://spdx.org/licenses/MIT.html</a></td>
-            </tr>
-            <tr>
-                <td>ch.qos.logback:logback-classic</td>
-                <td>1.4.14</td>
-                <td>EPL-1.0, <a href="https://spdx.org/licenses/EPL-1.0.html">https://spdx.org/licenses/EPL-1.0.html</a>; LGPL-2.1, <a href="https://spdx.org/licenses/LGPL-2.1.html">https://spdx.org/licenses/LGPL-2.1.html</a></td>
-            </tr>
-        </tbody>
-    </table>
-    <script>
-        function searchTable() {
-            var input, filter, table, tr, td, i, j, txtValue;
-            input = document.getElementById("searchInput");
-            filter = input.value.toLowerCase();
-            table = document.getElementById("complianceTable");
-            tr = table.getElementsByTagName("tr");
-            for (i = 1; i < tr.length; i++) {
-                tr[i].style.display = "none";
-                td = tr[i].getElementsByTagName("td");
-                for (j = 0; j < td.length; j++) {
-                    if (td[j]) {
-                        txtValue = td[j].textContent || td[j].innerText;
-                        if (txtValue.toLowerCase().indexOf(filter) > -1) {
-                            tr[i].style.display = "";
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-</body>
-</html> 
+
+## Usage
+
+1. **Place your SBOM JSON files in a directory**: By default, the script looks for SBOM JSON files in a directory named `sboms`. You can specify a different directory using the `--sbom-dir` argument.
+
+2. **Mapping file (optional)**: If you have a custom JSON file to map complex license names to SPDX IDs, you can specify it using the `--mapping-file` argument.
+
+3. **Run the script**: Execute the script with the appropriate arguments.
+
+```bash
+python generate.py --sbom-dir <path_to_sbom_directory> --mapping-file <path_to_mapping_file>
 ```
-## Text File (`licenses_text.txt`)
-```text
-License ID: MIT
-<license text for MIT>
-License ID: EPL-1.0
-<license text for EPL-1.0>
-License ID: LGPL-2.1
-<license text for LGPL-2.1>
+
+Example:
+
+```bash
+python generate.py --sbom-dir ../build/reports --mapping-file mapping.json
 ```
-## HTML File (`licenses_text.html`)
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <title>License Texts</title>
-</head>
-<body>
-    <h2>License ID: MIT</h2>
-    <pre><license text for MIT></pre>
-    <hr>
-    <h2>License ID: EPL-1.0</h2>
-    <pre><license text for EPL-1.0></pre>
-    <hr>
-    <h2>License ID: LGPL-2.1</h2>
-    <pre><license text for LGPL-2.1></pre>
-    <hr>
-</body>
-</html>
+
+## Output
+
+The script generates the following files in the current directory:
+
+- `license_compliance.txt`: A text report of the license compliance.
+- `license_compliance.html`: An HTML report of the license compliance.
+- `licenses_text.txt`: A text file containing the full text of the licenses.
+- `licenses_text.html`: An HTML file containing the full text of the licenses.
+
+## Script Details
+
+### Functions
+
+- **fetch_data(url)**: Fetches JSON data from the provided URL.
+- **load_sbom_files(directory)**: Loads SBOM JSON files from the specified directory.
+- **load_license_name_to_id_map(json_file)**: Loads the license name to SPDX ID mapping from a JSON file.
+- **extract_vcs_url(component)**: Extracts the VCS URL from the component's external references.
+- **resolve_relative_url(base_url, relative_url)**: Resolves a relative URL against a base URL.
+- **get_license_reference_url(license_id, licenses_lookup, exceptions_lookup)**: Gets the reference URL for a license or exception.
+- **get_full_license_text(details_url, is_exception=False)**: Fetches the full text of a license or exception.
+- **process_individual_license(license, licenses_lookup, license_texts, exceptions_lookup)**: Processes an individual license.
+- **process_license_expression(license, licenses_lookup, license_texts, exceptions_lookup)**: Processes a license expression.
+- **process_license_name(license, licenses_lookup, license_texts, exceptions_lookup)**: Processes a license by name.
+- **process_license(license, licenses_lookup, license_texts, exceptions_lookup)**: Determines and processes the type of license (individual, expression, or name).
+- **format_license_info(license_ids, license_names, license_references, exceptions, exceptions_lookup)**: Formats the license and exception information.
+- **process_component(key, component, licenses_lookup, license_texts, exceptions_lookup)**: Processes a component and extracts license information.
+- **generate_reports(components, licenses_lookup, exceptions_lookup)**: Generates the license compliance reports.
+- **write_text_report(filename, data)**: Writes the license compliance text report.
+- **write_html_report(filename, data)**: Writes the license compliance HTML report.
+- **write_license_texts(text_filename, html_filename, license_texts)**: Writes the full text of the licenses and exceptions.
+- **main()**: The main function that orchestrates the loading of SBOM files, fetching license data, processing components, and generating reports.
+
+### Argument Parser
+
+- `--sbom-dir`: Directory containing SBOM JSON files (default: `sboms`).
+- `--mapping-file`: Optional JSON file to map complex license names to SPDX IDs.
+
+## Example Mapping File
+
+```json
+{
+  "The GNU General Public License, v2 with Universal FOSS Exception, v1.0": ["GPL-2.0", "Universal-FOSS-exception-1.0"]
+}
 ```
+
+This mapping file helps in resolving complex license names to their corresponding SPDX IDs.
